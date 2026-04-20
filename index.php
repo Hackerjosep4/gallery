@@ -10,15 +10,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_GET['action'] ?? '') === 'censor
         exit;
     }
     $jsonPath = __DIR__ . '/request.json';
+
+    // Comprova escriptura
+    if (file_exists($jsonPath) && !is_writable($jsonPath)) {
+        @chmod($jsonPath, 0664); // intenta corregir permisos
+    }
+    if (!file_exists($jsonPath) && !is_writable(__DIR__)) {
+        echo json_encode(['ok' => false, 'error' => 'Sense permisos d\'escriptura al directori: ' . __DIR__]);
+        exit;
+    }
+
     $data = [];
     if (file_exists($jsonPath)) {
-        $decoded = json_decode(file_get_contents($jsonPath), true);
+        $raw     = file_get_contents($jsonPath);
+        $decoded = json_decode($raw, true);
         if (is_array($decoded)) $data = $decoded;
     }
     // Elimina entrada anterior del mateix fitxer si existeix
     $data = array_values(array_filter($data, fn($e) => ($e['name'] ?? '') !== $name));
     $data[] = ['name' => $name, 'reason' => $reason];
-    file_put_contents($jsonPath, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+
+    $written = file_put_contents($jsonPath, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+    if ($written === false) {
+        $err = error_get_last();
+        echo json_encode(['ok' => false, 'error' => 'No s\'ha pogut escriure: ' . ($err['message'] ?? 'error desconegut') . ' | Ruta: ' . $jsonPath]);
+        exit;
+    }
     echo json_encode(['ok' => true]);
     exit;
 }
