@@ -26,8 +26,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_GET['action'] ?? '') === 'censor
         $decoded = json_decode($raw, true);
         if (is_array($decoded)) $data = $decoded;
     }
-    // Elimina entrada anterior del mateix fitxer si existeix
-    $data = array_values(array_filter($data, fn($e) => ($e['name'] ?? '') !== $name));
     $data[] = ['name' => $name, 'reason' => $reason];
 
     $written = file_put_contents($jsonPath, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
