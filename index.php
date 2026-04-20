@@ -234,22 +234,21 @@ header p {
 #toolbar-left, #toolbar-right { display: flex; align-items: center; gap: 8px; }
 #requests-link {
   background: transparent;
-  border: 1px solid var(--border);
-  color: var(--muted);
+  border: 1px solid transparent;
+  color: transparent;
   padding: 6px 14px;
   border-radius: 20px;
   font-size: .78rem;
   font-family: 'DM Sans', sans-serif;
   letter-spacing: .08em;
-  cursor: pointer;
+  cursor: default;
   text-decoration: none;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  transition: all .2s;
+  user-select: none;
 }
-#requests-link:hover { border-color: var(--accent2); color: var(--accent2); }
-#requests-link svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2; }
+#requests-link svg { width: 13px; height: 13px; stroke: transparent; fill: none; stroke-width: 2; }
 #select-toggle {
   background: transparent;
   border: 1px solid var(--border);
