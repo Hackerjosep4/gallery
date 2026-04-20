@@ -281,16 +281,9 @@ header p {
 
 /* ── GRID ─────────────────────────────────────────────────── */
 #gallery {
-  padding: var(--gap);
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  grid-auto-rows: 6px;
-  gap: var(--gap);
+  padding: 0;
+  position: relative;
 }
-@media (min-width: 480px)  { #gallery { grid-template-columns: repeat(3, 1fr); } }
-@media (min-width: 768px)  { #gallery { grid-template-columns: repeat(4, 1fr); } }
-@media (min-width: 1100px) { #gallery { grid-template-columns: repeat(5, 1fr); } }
-@media (min-width: 1400px) { #gallery { grid-template-columns: repeat(6, 1fr); } }
 
 .thumb-wrap {
   position: relative;
@@ -299,7 +292,6 @@ header p {
   cursor: pointer;
   background: var(--surface);
   transition: transform .18s, box-shadow .18s;
-  align-self: start;
 }
 .thumb-wrap:hover { transform: scale(1.02); box-shadow: 0 8px 24px rgba(0,0,0,.5); }
 .thumb-wrap img {
@@ -642,6 +634,7 @@ header p {
   <?php if ($item['censored']): ?>
   <div class="thumb-wrap thumb-censored"
        data-index="<?= $i ?>"
+       data-ratio="<?= round($item['ratio'], 4) ?>"
        style="animation-delay:<?= min($i * 0.04, 1.2) ?>s">
     <img src="censored.jpg" loading="lazy" alt="Censurat">
     <div class="check-overlay"></div>
@@ -654,6 +647,7 @@ header p {
   <div class="thumb-wrap"
        data-index="<?= $i ?>"
        data-type="<?= $item['isVideo'] ? 'video' : 'image' ?>"
+       data-ratio="<?= round($item['ratio'], 4) ?>"
        style="animation-delay:<?= min($i * 0.04, 1.2) ?>s">
     <img src="<?= htmlspecialchars($item['preview']) ?>" loading="lazy" alt="">
     <?php if ($item['isVideo']): ?>
@@ -903,41 +897,66 @@ function downloadFile(filename) {
   document.body.removeChild(a);
 }
 
-// ── MASONRY GRID ───────────────────────────────────────────
-// Calcula el span real un cop cada imatge ha carregat,
-// basant-se en l'alçada renderitzada real (no en l'aspect ratio estimat).
-const GRID    = document.getElementById('gallery');
-const ROW_H   = 6;   // ha de coincidir amb grid-auto-rows del CSS
-const ROW_GAP = 10;  // ha de coincidir amb gap del CSS
+// ── MASONRY ────────────────────────────────────────────────
+const M_GAP = 10, M_PAD = 10;
 
-function setSpan(wrap) {
-    const img = wrap.querySelector('img');
-    if (!img) return;
-    const h = img.offsetHeight;
-    if (h === 0) return;
-    const span = Math.ceil((h + ROW_GAP) / (ROW_H + ROW_GAP));
-    wrap.style.gridRowEnd = 'span ' + Math.max(span, 4);
+function masonryCols() {
+  const w = window.innerWidth;
+  if (w >= 1400) return 6;
+  if (w >= 1100) return 5;
+  if (w >= 768)  return 4;
+  if (w >= 480)  return 3;
+  return 2;
 }
 
-function resizeAll() {
-    document.querySelectorAll('.thumb-wrap').forEach(setSpan);
-}
+function masonryLayout() {
+  const container = document.getElementById('gallery');
+  const items     = [...container.querySelectorAll('.thumb-wrap')];
+  if (!items.length) return;
 
-// Cada imatge: corregeix el span quan carrega
-document.querySelectorAll('.thumb-wrap img').forEach(img => {
-    const wrap = img.closest('.thumb-wrap');
-    if (img.complete && img.naturalHeight > 0) {
-        setSpan(wrap);
+  const cols    = masonryCols();
+  const colW    = Math.floor((container.clientWidth - M_PAD * 2 - M_GAP * (cols - 1)) / cols);
+  const heights = new Array(cols).fill(0);
+
+  items.forEach(item => {
+    const img = item.querySelector('img');
+    let h;
+    if (img && img.complete && img.naturalHeight > 0 && img.naturalWidth > 0) {
+      h = Math.round(colW * img.naturalHeight / img.naturalWidth);
     } else {
-        img.addEventListener('load', () => setSpan(wrap));
+      h = Math.round(colW * (parseFloat(item.dataset.ratio) || 0.75));
     }
-});
 
-// Corregeix en redimensionar la finestra (canvi de columnes responsive)
+    // 1. Columna més curta
+    let col = heights.indexOf(Math.min(...heights));
+
+    // 2. Si l'element sobresurt >50% per sota de la columna esquerra, desplaça a l'esquerra
+    while (col > 0) {
+      const stickOut = Math.max(0, (heights[col] + h) - heights[col - 1]);
+      if (stickOut > h * 0.5) col--;
+      else break;
+    }
+
+    // 3. Posiciona
+    item.style.position = 'absolute';
+    item.style.width    = colW + 'px';
+    item.style.left     = (M_PAD + col * (colW + M_GAP)) + 'px';
+    item.style.top      = (M_PAD + heights[col]) + 'px';
+    heights[col] += h + M_GAP;
+  });
+
+  container.style.height = (M_PAD + Math.max(...heights) + M_PAD) + 'px';
+}
+
+masonryLayout();
+document.querySelectorAll('.thumb-wrap img').forEach(img => {
+  if (!(img.complete && img.naturalHeight > 0))
+    img.addEventListener('load', masonryLayout);
+});
 let resizeTimer;
 window.addEventListener('resize', () => {
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(resizeAll, 100);
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(masonryLayout, 100);
 });
 
 
