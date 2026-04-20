@@ -86,7 +86,19 @@ function getMediaDateAll(string $path, bool $isVideo): int {
     return filemtime($path);
 }
 
-// ─── SCAN MEDIA (sense censura) ─────────────────────────────────────────────
+// ─── CENSORED LIST ─────────────────────────────────────────────────────────
+$censoredSet = [];
+$censoredJsonPath = __DIR__ . '/censored.json';
+if (file_exists($censoredJsonPath)) {
+    $censoredData = json_decode(file_get_contents($censoredJsonPath), true);
+    if (is_array($censoredData)) {
+        foreach ($censoredData as $entry) {
+            if (!empty($entry['name'])) $censoredSet[$entry['name']] = true;
+        }
+    }
+}
+
+// ─── SCAN MEDIA (sense censura, però amb marca) ──────────────────────────────
 $allExts  = array_unique(array_merge($IMAGE_EXTS, $VIDEO_EXTS));
 $globExts = implode(',', array_merge($allExts, array_map('strtoupper', $allExts)));
 
@@ -112,11 +124,12 @@ foreach (glob(__DIR__ . '/*.{' . $globExts . '}', GLOB_BRACE) as $path) {
     }
 
     $items[] = [
-        'file'    => $file,
-        'preview' => $previewUrl,
-        'ts'      => getMediaDateAll($path, $isVideo),
-        'ratio'   => $ratio,
-        'isVideo' => $isVideo,
+        'file'     => $file,
+        'preview'  => $previewUrl,
+        'ts'       => getMediaDateAll($path, $isVideo),
+        'ratio'    => $ratio,
+        'isVideo'  => $isVideo,
+        'censored' => isset($censoredSet[$file]),
     ];
 }
 
@@ -127,6 +140,7 @@ $gridMapJson   = json_encode(array_keys($lightboxItems));
 $filesJson     = json_encode(array_map(fn($i) => $i['file'],    $lightboxItems));
 $previewJson   = json_encode(array_column($lightboxItems, 'preview'));
 $typesJson     = json_encode(array_map(fn($i) => $i['isVideo'] ? 'video' : 'image', $lightboxItems));
+$censoredJson  = json_encode(array_map(fn($i) => $i['censored'], $lightboxItems));
 $totalCount    = count($items);
 $imgCount      = count(array_filter($items, fn($i) => !$i['isVideo']));
 $vidCount      = count(array_filter($items, fn($i) =>  $i['isVideo']));
@@ -311,6 +325,35 @@ header p {
   pointer-events: none; font-family: 'DM Sans', sans-serif; font-weight: 400; line-height: 1.6;
 }
 
+/* Overlay censurat */
+.censored-overlay {
+  position: absolute; inset: 0;
+  background: rgba(10,10,9,.55);
+  pointer-events: none;
+}
+.censored-badge {
+  position: absolute; top: 6px; left: 6px;
+  background: rgba(201,123,75,.85);
+  color: #0f0e0d;
+  font-size: .6rem; font-weight: 500; letter-spacing: .08em;
+  text-transform: uppercase;
+  padding: 2px 7px; border-radius: 4px;
+  pointer-events: none;
+}
+/* Badge censurat al lightbox */
+#lb-censored-badge {
+  position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+  background: rgba(201,123,75,.9);
+  color: #0f0e0d;
+  font-size: .7rem; font-weight: 500; letter-spacing: .1em;
+  text-transform: uppercase;
+  padding: 4px 12px; border-radius: 20px;
+  pointer-events: none;
+  display: none;
+  z-index: 5;
+}
+#lb-censored-badge.show { display: block; }
+
 @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
 .thumb-wrap { animation: fadeUp .4s ease backwards; }
 
@@ -490,6 +533,10 @@ header p {
     </div>
     <span class="video-badge">vídeo</span>
     <?php endif; ?>
+    <?php if ($item['censored']): ?>
+    <div class="censored-overlay"></div>
+    <span class="censored-badge">Censurat</span>
+    <?php endif; ?>
     <div class="check-overlay"></div>
     <div class="check-mark">
       <svg viewBox="0 0 12 12"><polyline points="1,6 5,10 11,2"/></svg>
@@ -519,6 +566,7 @@ header p {
     </button>
     <img id="lb-img" src="" alt="">
     <video id="lb-video" controls playsinline></video>
+    <div id="lb-censored-badge">Censurat</div>
     <div id="lb-spinner"></div>
     <button class="lb-arrow" id="lb-next" aria-label="Següent">
       <svg viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"/></svg>
@@ -551,6 +599,7 @@ header p {
 const IMAGES   = <?= $filesJson ?>;
 const PREVIEWS = <?= $previewJson ?>;
 const TYPES    = <?= $typesJson ?>;
+const CENSORED = <?= $censoredJson ?>;
 const GRID_MAP = <?= $gridMapJson ?>;
 
 let currentIdx = 0;
@@ -590,6 +639,7 @@ function showMedia() {
   lbCounter.textContent  = `${currentIdx + 1} / ${IMAGES.length}`;
   document.getElementById('lb-prev').style.visibility = currentIdx > 0 ? 'visible' : 'hidden';
   document.getElementById('lb-next').style.visibility = currentIdx < IMAGES.length - 1 ? 'visible' : 'hidden';
+  document.getElementById('lb-censored-badge').classList.toggle('show', !!CENSORED[currentIdx]);
 
   lbVideo.pause(); lbVideo.src = '';
 
