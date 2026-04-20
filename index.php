@@ -203,11 +203,7 @@ header p {
   letter-spacing: .08em;
   cursor: pointer;
   transition: all .2s;
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(4px);
 }
-#select-toggle.visible  { opacity: 1; pointer-events: auto; transform: translateY(0); }
 #select-toggle.active   { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 500; }
 #download-sel-btn {
   display: none;
@@ -735,7 +731,6 @@ selectToggle.addEventListener('click', () => {
     document.querySelectorAll('.thumb-wrap.selected').forEach(el => el.classList.remove('selected'));
     updateSelUI();
   }
-  resetIdleTimer();
 });
 
 // ── DOWNLOAD (individual, sense zip) ──────────────────────
@@ -793,16 +788,7 @@ window.addEventListener('resize', () => {
     resizeTimer = setTimeout(resizeAll, 100);
 });
 
-let idleTimer = null;
-function resetIdleTimer() {
-  clearTimeout(idleTimer);
-  if (!selectMode) selectToggle.classList.remove('visible');
-  idleTimer = setTimeout(() => selectToggle.classList.add('visible'), 3000);
-}
-['touchstart','mousemove','scroll','click'].forEach(evt =>
-  document.addEventListener(evt, resetIdleTimer, { passive: true })
-);
-resetIdleTimer();
+
 </script>
 </body>
 </html>
