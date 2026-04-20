@@ -466,7 +466,7 @@ header p {
 <body>
 
 <header>
-  <a href="index.php" class="back-btn">
+  <a href="./" class="back-btn">
     <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
     Galeria
   </a>
