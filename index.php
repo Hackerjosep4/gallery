@@ -226,11 +226,30 @@ header p {
 #toolbar {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
   gap: 8px;
   padding: 10px 16px;
   min-height: 48px;
 }
+#toolbar-left, #toolbar-right { display: flex; align-items: center; gap: 8px; }
+#requests-link {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: .78rem;
+  font-family: 'DM Sans', sans-serif;
+  letter-spacing: .08em;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all .2s;
+}
+#requests-link:hover { border-color: var(--accent2); color: var(--accent2); }
+#requests-link svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2; }
 #select-toggle {
   background: transparent;
   border: 1px solid var(--border);
@@ -603,12 +622,20 @@ header p {
 </header>
 
 <div id="toolbar">
-  <span id="sel-count"></span>
-  <button id="download-sel-btn">
-    <svg viewBox="0 0 16 16" fill="currentColor" style="width:12px;height:12px;display:inline;vertical-align:middle;margin-right:4px"><path d="M8 12l-4-4h2.5V2h3v6H12L8 12z"/><path d="M2 14h12v-1.5H2V14z"/></svg>
-    Descarregar seleccionades
-  </button>
-  <button id="select-toggle">Seleccionar</button>
+  <div id="toolbar-left">
+    <a href="request.php" id="requests-link">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+      Peticions de censura
+    </a>
+  </div>
+  <div id="toolbar-right">
+    <span id="sel-count"></span>
+    <button id="download-sel-btn">
+      <svg viewBox="0 0 16 16" fill="currentColor" style="width:12px;height:12px;display:inline;vertical-align:middle;margin-right:4px"><path d="M8 12l-4-4h2.5V2h3v6H12L8 12z"/><path d="M2 14h12v-1.5H2V14z"/></svg>
+      Descarregar seleccionades
+    </button>
+    <button id="select-toggle">Seleccionar</button>
+  </div>
 </div>
 
 <div id="gallery">
