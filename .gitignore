@@ -1,0 +1,21 @@
+# Ignorar todas las imágenes
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.bmp
+*.tiff
+*.svg
+*.webp
+
+# Ignorar todos los videos
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.wmv
+*.flv
+*.webm
+
+# EXCEPCIÓN: mantener censored.jpg
+!censored.jpg
