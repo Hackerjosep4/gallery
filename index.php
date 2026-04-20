@@ -1,4 +1,28 @@
 <?php
+// ─── AJAX: CENSURAR ────────────────────────────────────────────────────────
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_GET['action'] ?? '') === 'censor') {
+    header('Content-Type: application/json');
+    $name   = trim($_POST['name'] ?? '');
+    $reason = trim($_POST['reason'] ?? '');
+    if ($name === '' || $reason === '') {
+        http_response_code(400);
+        echo json_encode(['ok' => false, 'error' => 'Falten dades']);
+        exit;
+    }
+    $jsonPath = __DIR__ . '/request.json';
+    $data = [];
+    if (file_exists($jsonPath)) {
+        $decoded = json_decode(file_get_contents($jsonPath), true);
+        if (is_array($decoded)) $data = $decoded;
+    }
+    // Elimina entrada anterior del mateix fitxer si existeix
+    $data = array_values(array_filter($data, fn($e) => ($e['name'] ?? '') !== $name));
+    $data[] = ['name' => $name, 'reason' => $reason];
+    file_put_contents($jsonPath, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+    echo json_encode(['ok' => true]);
+    exit;
+}
+
 // ─── CONFIG ────────────────────────────────────────────────────────────────
 $SELF        = basename(__FILE__);
 $PREVIEW_DIR = __DIR__ . '/_previews';
@@ -415,6 +439,81 @@ header p {
 }
 #lb-download:hover { background: var(--accent2); }
 #lb-download svg { width: 14px; height: 14px; fill: var(--bg); }
+#lb-censor {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: 8px 18px;
+  border-radius: 20px;
+  font-size: .8rem;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 400;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  transition: all .2s;
+  flex-shrink: 0;
+}
+#lb-censor:hover { border-color: #c97b4b; color: #c97b4b; }
+#lb-censor svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; }
+
+/* Censor popup */
+#censor-popup {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  width: 280px;
+  z-index: 30;
+  box-shadow: 0 -8px 24px rgba(0,0,0,.6);
+}
+#censor-popup.open { display: block; }
+#censor-popup h3 {
+  font-size: .75rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+#censor-reason {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: .85rem;
+  font-weight: 300;
+  padding: 8px 10px;
+  resize: vertical;
+  min-height: 72px;
+  outline: none;
+  transition: border-color .2s;
+}
+#censor-reason:focus { border-color: #c97b4b; }
+#censor-send {
+  margin-top: 10px;
+  width: 100%;
+  background: #c97b4b;
+  border: none;
+  color: var(--bg);
+  padding: 8px;
+  border-radius: var(--radius);
+  font-size: .82rem;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity .2s;
+}
+#censor-send:hover { opacity: .85; }
+#censor-send:disabled { opacity: .5; cursor: default; }
+#censor-msg { font-size: .75rem; color: var(--muted); margin-top: 8px; text-align: center; min-height: 1em; }
 
 /* Loading spinner */
 @keyframes spin { to { transform: translate(-50%,-50%) rotate(360deg); } }
@@ -563,6 +662,18 @@ header p {
   <div id="lb-bar">
     <div id="lb-counter"></div>
     <span id="lb-filename"></span>
+    <div style="position:relative; flex-shrink:0;">
+      <button id="lb-censor">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+        Censurar
+      </button>
+      <div id="censor-popup">
+        <h3>Sol·licitar censura</h3>
+        <textarea id="censor-reason" placeholder="Motiu de la sol·licitud…"></textarea>
+        <button id="censor-send">Enviar sol·licitud</button>
+        <p id="censor-msg"></p>
+      </div>
+    </div>
     <button id="lb-download">
       <svg viewBox="0 0 16 16"><path d="M8 12l-4-4h2.5V2h3v6H12L8 12z"/><path d="M2 14h12v-1.5H2V14z"/></svg>
       Descarregar
@@ -789,6 +900,52 @@ window.addEventListener('resize', () => {
 });
 
 
+// ── CENSOR ─────────────────────────────────────────────────
+const lbCensor     = document.getElementById('lb-censor');
+const censorPopup  = document.getElementById('censor-popup');
+const censorReason = document.getElementById('censor-reason');
+const censorSend   = document.getElementById('censor-send');
+const censorMsg    = document.getElementById('censor-msg');
+
+lbCensor.addEventListener('click', e => {
+  e.stopPropagation();
+  const isOpen = censorPopup.classList.toggle('open');
+  if (isOpen) {
+    censorReason.value = '';
+    censorMsg.textContent = '';
+    censorReason.focus();
+  }
+});
+
+document.addEventListener('click', e => {
+  if (!censorPopup.contains(e.target) && e.target !== lbCensor) {
+    censorPopup.classList.remove('open');
+  }
+});
+
+censorSend.addEventListener('click', async () => {
+  const reason = censorReason.value.trim();
+  if (!reason) { censorMsg.textContent = 'Cal indicar un motiu.'; return; }
+  const name = IMAGES[currentIdx];
+  const fd = new FormData();
+  fd.append('name', name);
+  fd.append('reason', reason);
+  censorSend.disabled = true;
+  censorMsg.textContent = '';
+  try {
+    const res  = await fetch('?action=censor', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (data.ok) {
+      censorMsg.textContent = 'Sol·licitud enviada ✓';
+      setTimeout(() => censorPopup.classList.remove('open'), 1600);
+    } else {
+      censorMsg.textContent = data.error || 'Error en enviar.';
+    }
+  } catch {
+    censorMsg.textContent = 'Error de connexió.';
+  }
+  censorSend.disabled = false;
+});
 </script>
 </body>
 </html>
