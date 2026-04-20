@@ -153,14 +153,19 @@ header p {
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
-.back-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+.header-nav {
   position: absolute;
   top: 50%;
   left: 20px;
   transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   background: transparent;
   border: 1px solid var(--border);
   color: var(--muted);
@@ -466,10 +471,16 @@ header p {
 <body>
 
 <header>
-  <a href="./" class="back-btn">
-    <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
-    Galeria
-  </a>
+  <div class="header-nav">
+    <a href="./" class="back-btn">
+      <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+      Galeria
+    </a>
+    <a href="all.php" class="back-btn">
+      <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      Sense censurar
+    </a>
+  </div>
   <h1>Peticions de censura</h1>
   <p>
     <?= $totalCount ?> <?= $totalCount === 1 ? 'imatge' : 'imatges' ?>
